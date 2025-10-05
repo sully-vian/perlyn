@@ -1,7 +1,5 @@
 #import "@preview/suiji:0.4.0": *
 
-= Perlin Noise
-
 #let seed = 42
 #let rng = gen-rng-f(seed)
 
@@ -20,10 +18,8 @@
     .chunks(h)
 )
 
-#let get-cell(p) = p.map(calc.floor)
-
 #let get-grads(p) = {
-  let (i, j) = get-cell(p)
+  let (i, j) = p.map(calc.floor) // find cell coords
   let tl = vectors.at(j).at(i)
   let tr = vectors.at(j).at(i + 1)
   let bl = vectors.at(j + 1).at(i)
@@ -73,14 +69,14 @@
 #let val-min = calc.min(..matrix.map(a => calc.min(..a)))
 #let val-max = calc.max(..matrix.map(a => calc.max(..a)))
 
-#val-min
-#val-max
+//#val-min
+//#val-max
 
 // reduce to values between 0 and 1
 #let matrix = matrix.map(line => line.map(val => (val - val-min) / (val-max - val-min)))
 
-#calc.min(..matrix.map(a => calc.min(..a)))\
-#calc.max(..matrix.map(a => calc.max(..a)))
+//#calc.min(..matrix.map(a => calc.min(..a)))\
+//#calc.max(..matrix.map(a => calc.max(..a)))
 
 #let data = matrix.flatten()
 

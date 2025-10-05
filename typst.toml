@@ -5,4 +5,5 @@ entrypoint = ""
 authors = ["sully-vian"]
 license = "MIT-0"
 repository = ["https://github.com/sully-vian/perlyn"]
+description = "A perlin noise generator in Typst"
 
