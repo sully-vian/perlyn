@@ -1,0 +1,8 @@
+[package]
+name = "perlyn"
+version = "0.1.0"
+entrypoint = ""
+authors = ["sully-vian"]
+license = "MIT-0"
+repository = ["https://github.com/sully-vian/perlyn"]
+
