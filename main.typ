@@ -1,6 +1,6 @@
-#import "lib.typ": noise
+#import "src/lib.typ": noise
 
-#let (img-w, img-h) = (60, 60)
+#let (img-w, img-h) = (600, 900)
 #let (start-x, end-x, num-x) = (0, 10, 100)
 #let (start-y, end-y, num-y) = (0, 10, 100)
 
@@ -14,8 +14,8 @@
     let x = start-x + step-x * i
 
     let noise-val = noise(x, y) // compute noise
-    let norm = (noise-val + 1) * 0.5 // normalization to [0,1]
-    let p = norm * 100% // convert to percentages
+    let norm = (noise-val + 1) * 0.25 // normalization to [0,1]
+    let p = (1 - norm) * 100% // convert to percentages
     let color = rgb(p, p, p) // grayscale
 
     // generate cell
@@ -29,9 +29,15 @@
   }
 }
 
-#grid(
+#let background-grid = grid(
   columns: num-x,
   rows: num-y,
   gutter: 0pt,
   ..matrix
 )
+
+#page(background: background-grid, [
+  = Perlin Noise
+
+  #lorem(34)
+])
