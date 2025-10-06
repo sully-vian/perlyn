@@ -1,29 +1,277 @@
-#import "@preview/suiji:0.4.0": *
-
-#let seed = 42
-#let rng = gen-rng-f(seed)
-
-// gradient grid size
-#let (w, h) = (10, 10)
-
-#let (_, angles) = integers-f(rng, endpoint: true, low: 0, high: 360, size: w * h)
-
-#let vectors = (
-  angles
-    .map(angle => {
-      let x = calc.cos(angle * 1deg)
-      let y = calc.sin(angle * 1deg)
-      return (x, y)
-    })
-    .chunks(h)
+// Standard permutation table from Perlin noise reference implementation
+#let perm = (
+  151,
+  160,
+  137,
+  91,
+  90,
+  15,
+  131,
+  13,
+  201,
+  95,
+  96,
+  53,
+  194,
+  233,
+  7,
+  225,
+  140,
+  36,
+  103,
+  30,
+  69,
+  142,
+  8,
+  99,
+  37,
+  240,
+  21,
+  10,
+  23,
+  190,
+  6,
+  148,
+  247,
+  120,
+  234,
+  75,
+  0,
+  26,
+  197,
+  62,
+  94,
+  252,
+  219,
+  203,
+  117,
+  35,
+  11,
+  32,
+  57,
+  177,
+  33,
+  88,
+  237,
+  149,
+  56,
+  87,
+  174,
+  20,
+  125,
+  136,
+  171,
+  168,
+  68,
+  175,
+  74,
+  165,
+  71,
+  134,
+  139,
+  48,
+  27,
+  166,
+  77,
+  146,
+  158,
+  231,
+  83,
+  111,
+  229,
+  122,
+  60,
+  211,
+  133,
+  230,
+  220,
+  105,
+  92,
+  41,
+  55,
+  46,
+  245,
+  40,
+  244,
+  102,
+  143,
+  54,
+  65,
+  25,
+  63,
+  161,
+  1,
+  216,
+  80,
+  73,
+  209,
+  76,
+  132,
+  187,
+  208,
+  89,
+  18,
+  169,
+  200,
+  196,
+  135,
+  130,
+  116,
+  188,
+  159,
+  86,
+  164,
+  100,
+  109,
+  198,
+  173,
+  186,
+  3,
+  64,
+  52,
+  217,
+  226,
+  250,
+  124,
+  123,
+  5,
+  202,
+  38,
+  147,
+  118,
+  126,
+  255,
+  82,
+  85,
+  212,
+  207,
+  206,
+  59,
+  227,
+  47,
+  16,
+  58,
+  17,
+  182,
+  189,
+  28,
+  42,
+  223,
+  183,
+  170,
+  213,
+  119,
+  248,
+  152,
+  2,
+  44,
+  154,
+  163,
+  70,
+  221,
+  153,
+  101,
+  155,
+  167,
+  43,
+  172,
+  9,
+  129,
+  22,
+  39,
+  253,
+  19,
+  98,
+  108,
+  110,
+  79,
+  113,
+  224,
+  232,
+  178,
+  185,
+  112,
+  104,
+  218,
+  246,
+  97,
+  228,
+  251,
+  34,
+  242,
+  193,
+  238,
+  210,
+  144,
+  12,
+  191,
+  179,
+  162,
+  241,
+  81,
+  51,
+  145,
+  235,
+  249,
+  14,
+  239,
+  107,
+  49,
+  192,
+  214,
+  31,
+  181,
+  199,
+  106,
+  157,
+  184,
+  84,
+  204,
+  176,
+  115,
+  121,
+  50,
+  45,
+  127,
+  4,
+  150,
+  254,
+  138,
+  236,
+  205,
+  93,
+  222,
+  114,
+  67,
+  29,
+  24,
+  72,
+  243,
+  141,
+  128,
+  195,
+  78,
+  66,
+  215,
+  61,
+  156,
+  180,
 )
 
-#let get-grads(p) = {
+#let two-pi = 2 * calc.pi
+
+// i and j are the coordinates of the vector's origin (in the old vector array system)
+// hash(i,j) = perm[perm[i] + j]
+#let get-hash(i, j) = perm.at(calc.rem(i + perm.at(calc.rem(j, 256)), 256))
+#let get-angle(i, j) = get-hash(i, j) / 256 * two-pi
+
+// return the angles of the cell's 4 gradients
+#let get-angles(p) = {
   let (i, j) = p.map(calc.floor) // find cell coords
-  let tl = vectors.at(j).at(i)
-  let tr = vectors.at(j).at(i + 1)
-  let bl = vectors.at(j + 1).at(i)
-  let br = vectors.at(j + 1).at(i + 1)
+  let tl = get-angle(j, i)
+  let tr = get-angle(j, i + 1)
+  let bl = get-angle(j + 1, i)
+  let br = get-angle(j + 1, i + 1)
   return ((tl, tr), (bl, br))
 }
 
@@ -38,20 +286,27 @@
   )
 }
 
-#let dot((vx, vy), (ux, uy)) = vx * ux + vy * uy
+// (vx, vy): the ofset vector coordinates
+// (i,j): the gradients origin coordinates
+// Returns: the dot product between the offset vector and the gradient at the given position
+#let dot((vx, vy), angle) = {
+  let grad-x = calc.cos(angle)
+  let grad-y = calc.sin(angle)
+  return (vx * grad-x) + (vy * grad-y)
+}
 
 // linear interpolation
 #let lerp(start, stop, amt) = (1 - amt) * start + amt * stop
 
 #let fade(t) = t * t * t * (t * (t * 6 - 15) + 10)
 
-#let influences((x, y)) = {
+#let noise(x, y) = {
   let offsets = offsets((x, y))
-  let grads = get-grads((x, y))
-  let inf-tl = dot(offsets.at(0).at(0), grads.at(0).at(0))
-  let inf-tr = dot(offsets.at(0).at(1), grads.at(0).at(1))
-  let inf-bl = dot(offsets.at(1).at(0), grads.at(1).at(0))
-  let inf-br = dot(offsets.at(1).at(1), grads.at(1).at(1))
+  let angles = get-angles((x, y))
+  let inf-tl = dot(offsets.at(0).at(0), angles.at(0).at(0))
+  let inf-tr = dot(offsets.at(0).at(1), angles.at(0).at(1))
+  let inf-bl = dot(offsets.at(1).at(0), angles.at(1).at(0))
+  let inf-br = dot(offsets.at(1).at(1), angles.at(1).at(1))
 
   let inf-top = lerp(inf-tl, inf-tr, fade(calc.fract(x)))
   let inf-bot = lerp(inf-bl, inf-br, fade(calc.fract(x)))
@@ -59,38 +314,49 @@
   return inf-tot
 }
 
-
-#let n = 100
-
-#let matrix = range(n).map(i => range(n).map(j => {
-  influences(((h - 1) * i / n, (w - 1) * j / n))
-}))
-
-#let val-min = calc.min(..matrix.map(a => calc.min(..a)))
-#let val-max = calc.max(..matrix.map(a => calc.max(..a)))
-
-//#val-min
-//#val-max
-
-// reduce to values between 0 and 1
-#let matrix = matrix.map(line => line.map(val => (val - val-min) / (val-max - val-min)))
-
-//#calc.min(..matrix.map(a => calc.min(..a)))\
-//#calc.max(..matrix.map(a => calc.max(..a)))
-
-#let data = matrix.flatten()
+// returns a matrix of 2D vectors, like a 2D numpy linspace.
+#let make-matrix((start-x, end-x, num-x), (start-y, end-y, num-y)) = {
+  let mat = ()
+  let step-x = (end-x - start-x) / (num-x - 1)
+  let step-y = (end-y - start-y) / (num-y - 1)
+  for j in range(num-y) {
+    let line = ()
+    let y = start-y + step-y * j
+    for i in range(num-x) {
+      let x = start-x + step-x * i
+      line.push((x, y))
+    }
+    mat.push(line)
+  }
+  return mat
+}
 
 #let (img-w, img-h) = (500, 500)
 
-#let cell(v) = rect(
-  width: img-w / n * 1pt,
-  height: img-h / n * 1pt,
-  fill: rgb(v * 100%, v * 100%, v * 100%),
+#let range-x = (0, 10, 100)
+#let range-y = (0, 10, 100)
+#let matrix = make-matrix(range-x, range-y)
+
+#let matrix = matrix.map(line => line.map(point => noise(..point)))
+
+// turn the [-1,1] noise into grayscale
+#let helper(noise) = {
+  let norm = (noise + 1) / 2 // normalization to [0,1]
+  let p = norm * 100% // conversion
+  return rgb(p, p, p) // return grayscale
+}
+
+#let color-matrix = matrix.map(line => line.map(noise => helper(noise)))
+
+#let cell(color) = rect(
+  width: img-w / range-x.at(2) * 1pt,
+  height: img-h / range-y.at(2) * 1pt,
+  fill: color,
   stroke: none,
 )
 #grid(
-  columns: n,
-  rows: n,
+  columns: range-x.at(2),
+  rows: range-y.at(2),
   gutter: 0pt,
-  ..data.map(cell)
+  ..color-matrix.flatten().map(cell)
 )
