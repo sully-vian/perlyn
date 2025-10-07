@@ -1,9 +1,11 @@
 [package]
 name = "perlyn"
 version = "0.1.0"
-entrypoint = ""
+entrypoint = "src/lib.typ"
 authors = ["sully-vian"]
-license = "MIT-0"
+license = "MIT"
 repository = ["https://github.com/sully-vian/perlyn"]
-description = "A perlin noise generator in Typst"
-
+description = "A perlin noise generator in Typst."
+compiler = "0.13.1"
+keywords = ["random", "perlin", "noise", "graphics", "texture"]
+categories = ["utility"]
